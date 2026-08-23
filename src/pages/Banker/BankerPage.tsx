@@ -14,8 +14,9 @@ import PropertyModal from './modals/PropertyModal';
 import MortgageModal from './modals/MortgageModal';
 import BuildModal from './modals/BuildModal';
 import BankruptcyModal from './modals/BankruptcyModal';
+import FinishModal from './modals/FinishModal';
 
-type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | null;
+type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | 'finish' | null;
 
 const PASS_GO = 1400;
 
@@ -85,6 +86,12 @@ export default function BankerPage() {
             className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs rounded-lg"
           >
             ID
+          </button>
+          <button
+            onClick={() => setModal('finish')}
+            className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold rounded-lg"
+          >
+            Tamat
           </button>
           <button
             onClick={() => navigate('/display')}
@@ -355,6 +362,13 @@ export default function BankerPage() {
           state={state}
           onBankruptToPlayer={(bankruptId, creditorId) => dispatch({ type: 'BANKRUPT_TO_PLAYER', bankruptId, creditorId })}
           onBankruptToBank={(bankruptId) => dispatch({ type: 'BANKRUPT_TO_BANK', bankruptId })}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'finish' && (
+        <FinishModal
+          state={state}
+          onFinish={() => { resetGame(); navigate('/'); }}
           onClose={() => setModal(null)}
         />
       )}

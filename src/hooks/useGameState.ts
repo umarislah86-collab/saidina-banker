@@ -60,10 +60,18 @@ function reducer(state: GameState | null, action: Action): GameState | null {
       return TX.buildHotel(state, action.playerId, action.propertyId);
     case 'SELL_HOTEL':
       return TX.sellHotel(state, action.playerId, action.propertyId);
-    case 'BANKRUPT_TO_PLAYER':
-      return TX.declareBankruptcyToPlayer(state, action.bankruptId, action.creditorId);
-    case 'BANKRUPT_TO_BANK':
-      return TX.declareBankruptcyToBank(state, action.bankruptId);
+    case 'BANKRUPT_TO_PLAYER': {
+      const result = TX.declareBankruptcyToPlayer(state, action.bankruptId, action.creditorId);
+      return { ...result, players: result.players.map(p =>
+        p.id === action.bankruptId ? { ...p, bankruptAt: p.bankruptAt ?? Date.now() } : p
+      )};
+    }
+    case 'BANKRUPT_TO_BANK': {
+      const result = TX.declareBankruptcyToBank(state, action.bankruptId);
+      return { ...result, players: result.players.map(p =>
+        p.id === action.bankruptId ? { ...p, bankruptAt: p.bankruptAt ?? Date.now() } : p
+      )};
+    }
     case 'NEXT_TURN':
       return TX.nextTurn(state);
     case 'PREV_TURN':

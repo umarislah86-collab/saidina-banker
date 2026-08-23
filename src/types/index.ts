@@ -69,6 +69,7 @@ export interface Player {
   isBankrupt: boolean;
   turnOrder: number;
   avatar?: string;
+  bankruptAt?: number;
 }
 
 export type TransactionType =
@@ -126,6 +127,21 @@ export interface SetupPlayerDraft {
   name: string;
   color: PlayerColor;
   avatar?: string;
+}
+
+export interface GameResultRanking {
+  rank: number;
+  name: string;
+  avatar?: string;
+  netWorth: number;
+  isBankrupt: boolean;
+}
+
+export interface GameResult {
+  gameId: string;
+  finishedAt: number;
+  duration: number;
+  rankings: GameResultRanking[];
 }
 
 export interface ValidationResult {

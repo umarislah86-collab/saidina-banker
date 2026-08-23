@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { subscribeToGame } from '../../services/sync';
+import { subscribeToGame, subscribeToResults } from '../../services/sync';
 import { PLAYER_COLOR_MAP, GROUP_COLOR_MAP } from '../../types';
-import type { CoreGameState } from '../../types';
+import type { CoreGameState, GameResult } from '../../types';
 import { getProperty } from '../../data/properties';
 import { calculateNetWorth } from '../../game/netWorth';
 import { loadGame } from '../../game/persistence';
@@ -105,6 +105,12 @@ export default function DisplayPage() {
   const [now, setNow] = useState(Date.now());
   const [animations, setAnimations] = useState<FloatAnim[]>([]);
   const lastTxIdRef = useRef('');
+  const [results, setResults] = useState<GameResult[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeToResults(r => setResults(r));
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const local = loadGame();
@@ -216,7 +222,7 @@ export default function DisplayPage() {
       </div>
 
       {/* Player cards grid */}
-      <div className={`flex-1 min-h-0 grid ${cols} gap-3`}>
+      <div className={`flex-[3] min-h-0 grid ${cols} gap-3`}>
         {rankedPlayers.map((player, rank) => {
           const pColor = PLAYER_COLOR_MAP[player.color];
           const ownedProps = gameState.properties.filter(p => p.ownerId === player.id);
@@ -318,6 +324,49 @@ export default function DisplayPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Hall of Fame */}
+      <div className="flex-[2] min-h-0 flex flex-col border-t border-gray-800 pt-3 gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-amber-400 text-base">🏆</span>
+          <span className="text-amber-400 font-black text-sm uppercase tracking-widest">Dewan Kegemilangan</span>
+        </div>
+        {results.length === 0 ? (
+          <p className="text-gray-700 text-xs">Belum ada rekod. Tamatkan permainan untuk simpan.</p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-1 flex-1 min-h-0">
+            {results.map((r, i) => {
+              const winner = r.rankings[0];
+              const date = new Date(r.finishedAt).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short' });
+              const dur = (() => {
+                const s = Math.floor(r.duration / 1000);
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                return h > 0 ? `${h}j ${m}m` : `${m}m`;
+              })();
+              return (
+                <div key={r.gameId} className="flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-col items-center gap-1.5 min-w-[110px]">
+                  <span className="text-gray-600 text-xs">#{i + 1}</span>
+                  {winner?.avatar ? (
+                    <img src={winner.avatar} className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-500" alt="" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center font-black text-amber-400 text-lg">
+                      {winner?.name.charAt(0) ?? '?'}
+                    </div>
+                  )}
+                  <p className="text-white font-black text-sm text-center truncate w-full">{winner?.name ?? '—'}</p>
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {r.rankings.slice(1, 4).map((p, ri) => (
+                      <span key={ri} className="text-gray-500 text-xs">{['🥈','🥉','4️⃣'][ri]} {p.name}</span>
+                    ))}
+                  </div>
+                  <div className="text-gray-600 text-xs text-center">{date} · {dur}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
