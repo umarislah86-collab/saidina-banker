@@ -53,7 +53,10 @@ export function transferMoney(
   const toName = toId === 'bank' ? 'Bank' : state.players.find(p => p.id === toId)?.name ?? toId;
   const desc = customDescription ?? `${fromName} bayar ${toName} RM${amount.toLocaleString()}`;
 
-  const tx = makeTransaction('money_transfer', desc, { fromPlayerId: fromId === 'bank' ? undefined : fromId, toPlayerId: toId === 'bank' ? undefined : toId, amount });
+  const txExtras: Partial<Transaction> = { amount };
+  if (fromId !== 'bank') txExtras.fromPlayerId = fromId;
+  if (toId !== 'bank') txExtras.toPlayerId = toId;
+  const tx = makeTransaction('money_transfer', desc, txExtras);
 
   return { ...state, players, transactions: [tx, ...state.transactions], snapshot: snap, updatedAt: now() };
 }

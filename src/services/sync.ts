@@ -7,14 +7,19 @@ const COLLECTION = 'games';
 
 function toSyncState(state: GameState): CoreGameState {
   const { snapshot: _snap, ...rest } = state;
-  return rest;
+  // Strip undefined values — Firestore rejects them
+  return JSON.parse(JSON.stringify(rest));
 }
 
 export function syncGameToFirestore(state: GameState): void {
-  const syncState = toSyncState(state);
-  setDoc(doc(db, COLLECTION, state.gameId), syncState).catch(() => {
-    // Non-fatal — local state is source of truth
-  });
+  try {
+    const syncState = toSyncState(state);
+    setDoc(doc(db, COLLECTION, state.gameId), syncState).catch(() => {
+      // Non-fatal — local state is source of truth
+    });
+  } catch {
+    // Non-fatal
+  }
 }
 
 export function subscribeToGame(
