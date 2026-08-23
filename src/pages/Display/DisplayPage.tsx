@@ -82,6 +82,12 @@ export default function DisplayPage() {
         <div>
           <h1 className="text-white font-black text-4xl">Saidina</h1>
           <p className="text-gray-500 text-lg">Giliran ke-{gameState.turnNumber}</p>
+          <button
+            onClick={() => { setGameId(''); setGameState(null); setError(''); }}
+            className="mt-1 text-gray-600 hover:text-gray-400 text-xs underline"
+          >
+            Tukar Game ID
+          </button>
         </div>
         <div className="text-right">
           <p className="text-gray-500 text-sm">Giliran</p>
