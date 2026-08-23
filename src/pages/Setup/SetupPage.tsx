@@ -148,6 +148,7 @@ export default function SetupPage() {
                   <div className="text-2xl mb-1">📱</div>
                   <div className="font-bold text-white text-sm">Dadu Digital</div>
                   <div className="text-gray-400 text-xs mt-1">App baling dadu dan jejak posisi papan.</div>
+                  <div className="text-yellow-500 text-xs mt-1 font-semibold">🚧 Akan datang</div>
                 </button>
               </div>
             </div>
