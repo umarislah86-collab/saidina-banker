@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameState } from '../../hooks/useGameState';
 import { PLAYER_COLOR_MAP, GROUP_COLOR_MAP } from '../../types';
@@ -26,10 +26,11 @@ export default function BankerPage() {
   const [showGameId, setShowGameId] = useState(false);
   const [collectTarget, setCollectTarget] = useState(false);
 
-  if (!state) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!state) navigate('/');
+  }, [state]);
+
+  if (!state) return null;
 
   const currentPlayer = state.players[state.currentTurnIndex];
   const activePlayers = state.players.filter(p => !p.isBankrupt);
