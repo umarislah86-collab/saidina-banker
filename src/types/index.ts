@@ -125,6 +125,7 @@ export interface SetupPlayerDraft {
   id: string;
   name: string;
   color: PlayerColor;
+  avatar?: string;
 }
 
 export interface ValidationResult {

@@ -19,6 +19,7 @@ export function createInitialGameState(
     cash: mergedConfig.startingCash,
     isBankrupt: false,
     turnOrder: i,
+    ...(p.avatar ? { avatar: p.avatar } : {}),
   }));
 
   const properties: PropertyState[] = PROPERTIES.map(def => ({
