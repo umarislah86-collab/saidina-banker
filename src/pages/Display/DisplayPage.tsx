@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { subscribeToGame } from '../../services/sync';
 import { PLAYER_COLOR_MAP, GROUP_COLOR_MAP } from '../../types';
@@ -8,12 +8,13 @@ import { calculateNetWorth } from '../../game/netWorth';
 import { loadGame } from '../../game/persistence';
 import RM from '../../components/RM';
 
+/* ─── helpers ─── */
 function formatElapsed(ms: number): string {
   const s = Math.floor(ms / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  if (h > 0) return `${h}j ${m.toString().padStart(2, '0')}m ${sec.toString().padStart(2, '0')}s`;
+  if (h > 0) return `${h}j ${m.toString().padStart(2, '0')}m`;
   return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 }
 
@@ -21,15 +22,80 @@ function formatStartTime(ts: number): string {
   return new Date(ts).toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
 }
 
-function gridClass(n: number): string {
-  if (n === 1) return 'flex justify-center';
-  if (n === 2) return 'grid grid-cols-2 max-w-2xl mx-auto';
-  if (n === 3) return 'grid grid-cols-3 max-w-4xl mx-auto';
-  if (n === 4) return 'grid grid-cols-4 max-w-5xl mx-auto';
-  if (n === 5) return 'grid grid-cols-5';
-  return 'grid grid-cols-6';
+const GRID_COLS: Record<number, string> = {
+  1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3',
+  4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6',
+};
+
+function avatarPx(n: number): number {
+  if (n <= 2) return 140;
+  if (n <= 4) return 100;
+  return 72;
 }
 
+/* ─── types ─── */
+type FloatAnim = { id: string; playerId: string; amount: number; sign: 1 | -1 };
+
+/* ─── CSS ─── */
+const STYLES = `
+@keyframes saidinaShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes saidinaFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+.saidina-logo {
+  background: linear-gradient(90deg,#dc2626 0%,#f97316 30%,#fbbf24 50%,#f97316 70%,#dc2626 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: saidinaShimmer 3s linear infinite, saidinaFloat 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(251,191,36,0.35));
+}
+@keyframes breatheGlow {
+  0%, 100% { box-shadow: 0 0 10px 2px var(--gc); opacity: 1; }
+  50%       { box-shadow: 0 0 32px 10px var(--gc); opacity: 1; }
+}
+.card-glow { animation: breatheGlow 2s ease-in-out infinite; }
+@keyframes floatFade {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  15%  { opacity: 1; transform: translateY(-14px) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-90px) scale(0.85); }
+}
+.float-label { animation: floatFade 2.2s ease-out forwards; pointer-events: none; }
+`;
+
+/* ─── components ─── */
+function SaidinaLogo() {
+  return (
+    <div>
+      <div className="saidina-logo font-black text-4xl tracking-widest leading-none">$AIDINA</div>
+      <div className="text-amber-600 text-xs font-semibold tracking-widest uppercase mt-0.5">Banker Companion</div>
+    </div>
+  );
+}
+
+function FloatLabel({ amount, sign }: { amount: number; sign: 1 | -1 }) {
+  return (
+    <div className="float-label absolute inset-0 flex items-center justify-center z-30">
+      <span
+        className="font-black drop-shadow-2xl"
+        style={{
+          fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+          color: sign > 0 ? '#4ade80' : '#f87171',
+          textShadow: sign > 0 ? '0 0 20px #4ade80' : '0 0 20px #f87171',
+        }}
+      >
+        {sign > 0 ? '+' : '-'}RM{amount.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+/* ─── main ─── */
 export default function DisplayPage() {
   const [searchParams] = useSearchParams();
   const [gameState, setGameState] = useState<CoreGameState | null>(null);
@@ -37,6 +103,8 @@ export default function DisplayPage() {
   const [gameId, setGameId] = useState(searchParams.get('id') ?? '');
   const [inputId, setInputId] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [animations, setAnimations] = useState<FloatAnim[]>([]);
+  const lastTxIdRef = useRef('');
 
   useEffect(() => {
     const local = loadGame();
@@ -49,11 +117,7 @@ export default function DisplayPage() {
 
   useEffect(() => {
     if (!gameId) return;
-    const unsub = subscribeToGame(
-      gameId,
-      gs => setGameState(gs),
-      err => setError('Gagal sambung: ' + err.message)
-    );
+    const unsub = subscribeToGame(gameId, gs => setGameState(gs), err => setError('Gagal: ' + err.message));
     return unsub;
   }, [gameId]);
 
@@ -62,10 +126,25 @@ export default function DisplayPage() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (!gameState?.transactions?.length) return;
+    const latest = gameState.transactions[gameState.transactions.length - 1];
+    if (latest.id === lastTxIdRef.current) return;
+    lastTxIdRef.current = latest.id;
+    if (!latest.amount || latest.amount <= 0) return;
+    const fresh: FloatAnim[] = [];
+    if (latest.toPlayerId) fresh.push({ id: latest.id + '+', playerId: latest.toPlayerId, amount: latest.amount, sign: 1 });
+    if (latest.fromPlayerId) fresh.push({ id: latest.id + '-', playerId: latest.fromPlayerId, amount: latest.amount, sign: -1 });
+    if (!fresh.length) return;
+    setAnimations(prev => [...prev, ...fresh]);
+    setTimeout(() => setAnimations(prev => prev.filter(a => !fresh.some(f => f.id === a.id))), 2400);
+  }, [gameState?.transactions]);
+
   if (!gameId) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-8">
-        <div className="text-center space-y-4 max-w-sm w-full">
+        <style>{STYLES}</style>
+        <div className="text-center space-y-5 max-w-sm w-full">
           <SaidinaLogo />
           <p className="text-gray-400">Masukkan Game ID dari peranti Banker</p>
           <input
@@ -88,6 +167,7 @@ export default function DisplayPage() {
   if (!gameState) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <style>{STYLES}</style>
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-gray-400">Menyambung...</p>
@@ -106,18 +186,26 @@ export default function DisplayPage() {
   );
   const bankruptPlayers = gameState.players.filter(p => p.isBankrupt);
   const elapsed = gameState.createdAt ? now - gameState.createdAt : 0;
+  const avPx = avatarPx(rankedPlayers.length);
+  const cols = GRID_COLS[Math.min(rankedPlayers.length, 6)] ?? 'grid-cols-6';
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col p-4 gap-5">
-      {/* Logo + Header */}
-      <div className="flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-gray-950 p-4 gap-3 overflow-hidden">
+      <style>{STYLES}</style>
+
+      {/* Header */}
+      <div className="flex items-start justify-between shrink-0">
         <SaidinaLogo />
-        <div className="text-right space-y-0.5">
-          <p className="text-gray-500 text-xs">Giliran ke-{gameState.turnNumber}</p>
-          <p className="text-gray-500 text-xs">
-            Mula: {gameState.createdAt ? formatStartTime(gameState.createdAt) : '—'}
-          </p>
-          <p className="text-amber-400 font-mono text-sm font-bold">{formatElapsed(elapsed)}</p>
+        <div className="text-right">
+          <div className="font-mono font-black text-amber-400" style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>
+            {formatElapsed(elapsed)}
+          </div>
+          {gameState.createdAt && (
+            <div className="text-gray-300 font-semibold" style={{ fontSize: 'clamp(0.85rem, 1.5vw, 1.1rem)' }}>
+              Mula: {formatStartTime(gameState.createdAt)}
+            </div>
+          )}
+          <div className="text-gray-500 text-xs">Giliran ke-{gameState.turnNumber}</div>
           <button
             onClick={() => { setGameId(''); setGameState(null); setError(''); }}
             className="text-gray-700 hover:text-gray-500 text-xs underline"
@@ -127,34 +215,14 @@ export default function DisplayPage() {
         </div>
       </div>
 
-      {/* Current Turn Banner */}
-      <div
-        className="rounded-xl px-4 py-2 flex items-center gap-3 border"
-        style={{
-          backgroundColor: PLAYER_COLOR_MAP[currentPlayer?.color ?? 'red'].hex + '18',
-          borderColor: PLAYER_COLOR_MAP[currentPlayer?.color ?? 'red'].hex + '55',
-        }}
-      >
-        {currentPlayer?.avatar ? (
-          <img src={currentPlayer.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
-        ) : (
-          <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm" style={{ backgroundColor: PLAYER_COLOR_MAP[currentPlayer?.color ?? 'red'].hex }}>
-            {currentPlayer?.name.charAt(0)}
-          </div>
-        )}
-        <div>
-          <span className="text-xs text-gray-400 uppercase tracking-widest">Giliran Sekarang</span>
-          <p className="text-white font-black text-lg leading-none">{currentPlayer?.name}</p>
-        </div>
-      </div>
-
-      {/* Player Cards */}
-      <div className={`${gridClass(rankedPlayers.length)} gap-3 w-full`}>
+      {/* Player cards grid */}
+      <div className={`flex-1 min-h-0 grid ${cols} gap-3`}>
         {rankedPlayers.map((player, rank) => {
           const pColor = PLAYER_COLOR_MAP[player.color];
           const ownedProps = gameState.properties.filter(p => p.ownerId === player.id);
           const netWorth = calculateNetWorth(player.id, gameState as Parameters<typeof calculateNetWorth>[1]);
           const isCurrent = player.id === currentPlayer?.id;
+          const playerAnims = animations.filter(a => a.playerId === player.id);
 
           const byGroup: Record<string, typeof ownedProps> = {};
           ownedProps.forEach(p => {
@@ -166,72 +234,59 @@ export default function DisplayPage() {
           return (
             <div
               key={player.id}
-              className={`bg-gray-900 rounded-2xl flex flex-col border-2 overflow-hidden transition-all ${
-                isCurrent ? 'border-amber-400 shadow-lg shadow-amber-400/20' : 'border-gray-800'
-              }`}
+              className={`relative bg-gray-900 rounded-2xl flex flex-col border-2 overflow-hidden ${isCurrent ? 'card-glow' : ''}`}
+              style={{
+                borderColor: isCurrent ? pColor.hex : '#1f2937',
+                ['--gc' as string]: pColor.hex + 'aa',
+              }}
             >
-              {/* Rank badge */}
+              {/* Rank + Networth badge */}
               <div
-                className="px-3 py-1.5 flex items-center justify-between"
-                style={{ backgroundColor: pColor.hex + '22' }}
+                className="shrink-0 flex items-center justify-between px-3 py-2"
+                style={{ backgroundColor: pColor.hex + '28' }}
               >
-                <span className="text-xs font-black tracking-widest uppercase" style={{ color: pColor.hex }}>
-                  #{rank + 1}
-                </span>
-                {isCurrent && (
-                  <span className="text-amber-400 text-xs font-bold animate-pulse">▶ SEKARANG</span>
-                )}
+                <span className="font-black text-lg" style={{ color: pColor.hex }}>#{rank + 1}</span>
+                <span className="font-black text-base text-white">RM{netWorth.toLocaleString()}</span>
               </div>
 
-              <div className="p-3 flex flex-col items-center gap-2 flex-1">
-                {/* Big avatar */}
-                <div className="relative">
-                  {player.avatar ? (
-                    <img
-                      src={player.avatar}
-                      alt={player.name}
-                      className="w-20 h-20 rounded-full object-cover"
-                      style={{ outline: `3px solid ${pColor.hex}`, outlineOffset: '2px' }}
-                    />
-                  ) : (
-                    <div
-                      className="w-20 h-20 rounded-full flex items-center justify-center font-black text-3xl"
-                      style={{
-                        backgroundColor: pColor.hex + '33',
-                        border: `3px solid ${pColor.hex}`,
-                        color: pColor.hex,
-                      }}
-                    >
-                      {player.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Name */}
-                <p className="text-white font-black text-base text-center leading-tight">{player.name}</p>
-
-                {/* Cash + networth */}
-                <div className="w-full space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-xs">Tunai</span>
-                    <RM amount={player.cash} size="sm" />
+              {/* Avatar + Name + Cash */}
+              <div className="shrink-0 flex flex-col items-center gap-1.5 pt-3 pb-2 px-2">
+                {player.avatar ? (
+                  <img
+                    src={player.avatar}
+                    alt={player.name}
+                    style={{ width: avPx, height: avPx, outline: `3px solid ${pColor.hex}`, outlineOffset: 2 }}
+                    className="rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: avPx, height: avPx,
+                      backgroundColor: pColor.hex + '33',
+                      border: `3px solid ${pColor.hex}`,
+                      color: pColor.hex,
+                      fontSize: avPx * 0.38,
+                    }}
+                    className="rounded-full flex items-center justify-center font-black"
+                  >
+                    {player.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 text-xs">Nilai Bersih</span>
-                    <span className="text-gray-300 font-bold text-sm">RM{netWorth.toLocaleString()}</span>
-                  </div>
-                </div>
+                )}
+                <p className="text-white font-black text-center leading-tight" style={{ fontSize: 'clamp(0.85rem, 1.4vw, 1.1rem)' }}>
+                  {player.name}
+                </p>
+                <RM amount={player.cash} size="md" />
+              </div>
 
-                {/* Properties */}
-                {Object.entries(byGroup).length > 0 && (
-                  <div className="w-full border-t border-gray-800 pt-2 space-y-1.5">
+              {/* Properties — flex-1 fills remaining height */}
+              <div className="flex-1 px-2 pb-2 overflow-y-auto">
+                {Object.entries(byGroup).length > 0 ? (
+                  <div className="space-y-1.5 pt-1 border-t border-gray-800">
                     {Object.entries(byGroup).map(([group, props]) => {
                       const gc = GROUP_COLOR_MAP[group as keyof typeof GROUP_COLOR_MAP];
                       return (
                         <div key={group} className="space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: gc.hex }} />
-                          </div>
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: gc.hex }} />
                           <div className="flex flex-wrap gap-1">
                             {props.map(ps => {
                               const def = getProperty(ps.propertyId);
@@ -253,60 +308,28 @@ export default function DisplayPage() {
                       );
                     })}
                   </div>
-                )}
-
-                {ownedProps.length === 0 && (
-                  <p className="text-gray-700 text-xs">Tiada hartanah</p>
-                )}
+                ) : null}
               </div>
+
+              {/* Transaction float animations */}
+              {playerAnims.map(anim => (
+                <FloatLabel key={anim.id} amount={anim.amount} sign={anim.sign} />
+              ))}
             </div>
           );
         })}
       </div>
 
-      {/* Bankrupt */}
-      {bankruptPlayers.length > 0 && (
-        <div className="flex gap-3 items-center text-gray-600 text-sm">
-          <span>Muflis:</span>
-          {bankruptPlayers.map(p => (
-            <span key={p.id} className="text-gray-500">{p.name}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="text-center">
+      {/* Footer */}
+      <div className="shrink-0 flex items-center justify-between">
+        {bankruptPlayers.length > 0 ? (
+          <div className="flex gap-2 text-gray-600 text-xs">
+            <span>Muflis:</span>
+            {bankruptPlayers.map(p => <span key={p.id}>{p.name}</span>)}
+          </div>
+        ) : <div />}
         <p className="text-gray-800 text-xs font-mono">{gameState.gameId}</p>
       </div>
     </div>
-  );
-}
-
-function SaidinaLogo() {
-  return (
-    <>
-      <style>{`
-        @keyframes saidinaShimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes saidinaFloat {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-4px); }
-        }
-        .saidina-logo {
-          background: linear-gradient(90deg, #dc2626 0%, #f97316 30%, #fbbf24 50%, #f97316 70%, #dc2626 100%);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: saidinaShimmer 3s linear infinite, saidinaFloat 4s ease-in-out infinite;
-          filter: drop-shadow(0 0 8px rgba(251,191,36,0.4));
-        }
-      `}</style>
-      <div>
-        <div className="saidina-logo font-black text-3xl tracking-widest leading-none">$AIDINA</div>
-        <div className="text-amber-600 text-xs font-semibold tracking-widest uppercase mt-0.5">Banker Companion</div>
-      </div>
-    </>
   );
 }
