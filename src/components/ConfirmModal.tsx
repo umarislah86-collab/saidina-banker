@@ -14,7 +14,7 @@ export default function ConfirmModal({
   danger = false, onConfirm, onCancel,
 }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 bg-black/70 p-4">
       <div className="w-full max-w-sm bg-gray-900 rounded-2xl border border-gray-700 p-6 space-y-4">
         <h3 className="text-lg font-bold text-white">{title}</h3>
         <p className="text-gray-300 text-sm">{message}</p>

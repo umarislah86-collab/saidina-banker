@@ -53,7 +53,7 @@ export default function AvatarCaptureModal({ playerName, onCapture, onClose }: P
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 bg-black/80 p-4">
       <div className="w-full max-w-sm bg-gray-900 rounded-2xl border border-gray-700 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-white font-bold text-lg">Avatar — {playerName}</h3>
