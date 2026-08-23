@@ -15,6 +15,7 @@ type Action =
   | { type: 'MORTGAGE'; playerId: string; propertyId: string }
   | { type: 'UNMORTGAGE'; playerId: string; propertyId: string }
   | { type: 'BUILD_HOUSE'; playerId: string; propertyId: string }
+  | { type: 'BUILD_HOUSES_MULTI'; playerId: string; propertyId: string; count: number }
   | { type: 'SELL_HOUSE'; playerId: string; propertyId: string }
   | { type: 'BUILD_HOTEL'; playerId: string; propertyId: string }
   | { type: 'SELL_HOTEL'; playerId: string; propertyId: string }
@@ -24,7 +25,8 @@ type Action =
   | { type: 'PREV_TURN' }
   | { type: 'UNDO' }
   | { type: 'RESET' }
-  | { type: 'COLLECT_START'; playerId: string; amount: number };
+  | { type: 'COLLECT_START'; playerId: string; amount: number }
+  | { type: 'SET_AVATAR'; playerId: string; avatar: string };
 
 function reducer(state: GameState | null, action: Action): GameState | null {
   if (action.type === 'LOAD') return action.state;
@@ -47,6 +49,11 @@ function reducer(state: GameState | null, action: Action): GameState | null {
       return TX.unmortgageProperty(state, action.playerId, action.propertyId);
     case 'BUILD_HOUSE':
       return TX.buildHouse(state, action.playerId, action.propertyId);
+    case 'BUILD_HOUSES_MULTI': {
+      let s = state;
+      for (let i = 0; i < action.count; i++) s = TX.buildHouse(s, action.playerId, action.propertyId);
+      return s;
+    }
     case 'SELL_HOUSE':
       return TX.sellHouse(state, action.playerId, action.propertyId);
     case 'BUILD_HOTEL':
@@ -67,6 +74,8 @@ function reducer(state: GameState | null, action: Action): GameState | null {
     }
     case 'COLLECT_START':
       return TX.collectStart(state, action.playerId, action.amount);
+    case 'SET_AVATAR':
+      return { ...state, players: state.players.map(p => p.id === action.playerId ? { ...p, avatar: action.avatar } : p) };
     default:
       return state;
   }

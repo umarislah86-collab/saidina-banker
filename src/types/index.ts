@@ -68,6 +68,7 @@ export interface Player {
   cash: number;
   isBankrupt: boolean;
   turnOrder: number;
+  avatar?: string;
 }
 
 export type TransactionType =

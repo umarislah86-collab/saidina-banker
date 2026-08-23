@@ -3,6 +3,7 @@ import type { GameState } from '../../../types';
 import { GROUP_COLOR_MAP } from '../../../types';
 import { getProperty } from '../../../data/properties';
 import { validateBuyProperty } from '../../../game/validation';
+import SearchSelect from '../../../components/SearchSelect';
 import RM from '../../../components/RM';
 
 interface Props {
@@ -21,6 +22,11 @@ export default function PropertyModal({ state, onBuy, onClose }: Props) {
   const unowned = state.properties.filter(p => !p.ownerId);
   const buyer = state.players.find(p => p.id === buyerId);
   const selectedDef = propertyId ? getProperty(propertyId) : null;
+
+  const propertyItems = unowned.map(ps => {
+    const def = getProperty(ps.propertyId);
+    return { id: ps.propertyId, label: def.name, sub: `RM${def.basePrice.toLocaleString()} — ${def.streetName}` };
+  });
 
   function handleConfirm() {
     if (!propertyId) { setError('Pilih hartanah'); return; }
@@ -53,21 +59,12 @@ export default function PropertyModal({ state, onBuy, onClose }: Props) {
 
         <div className="space-y-1">
           <label className="text-gray-400 text-xs uppercase tracking-wider">Hartanah</label>
-          <select
+          <SearchSelect
+            items={propertyItems}
             value={propertyId}
-            onChange={e => { setPropertyId(e.target.value); setError(''); }}
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
-          >
-            <option value="">-- Pilih hartanah --</option>
-            {unowned.map(ps => {
-              const def = getProperty(ps.propertyId);
-              return (
-                <option key={ps.propertyId} value={ps.propertyId}>
-                  {def.name} — RM{def.basePrice.toLocaleString()}
-                </option>
-              );
-            })}
-          </select>
+            onChange={id => { setPropertyId(id); setError(''); }}
+            placeholder="Taip nama hartanah..."
+          />
         </div>
 
         {selectedDef && buyer && (
@@ -80,17 +77,11 @@ export default function PropertyModal({ state, onBuy, onClose }: Props) {
               <span className="text-gray-400">Harga</span>
               <RM amount={selectedDef.basePrice} size="sm" />
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Wang {buyer.name} sekarang</span>
-              <RM amount={buyer.cash} size="sm" />
-            </div>
             <div className="flex justify-between text-sm border-t border-gray-700 pt-2">
               <span className="text-gray-300 font-semibold">Baki selepas beli</span>
               <RM amount={buyer.cash - selectedDef.basePrice} size="sm" />
             </div>
-            {buyer.cash < selectedDef.basePrice && (
-              <p className="text-red-400 text-xs">⚠ Tak cukup wang</p>
-            )}
+            {buyer.cash < selectedDef.basePrice && <p className="text-red-400 text-xs">⚠ Tak cukup wang</p>}
           </div>
         )}
 
@@ -99,7 +90,7 @@ export default function PropertyModal({ state, onBuy, onClose }: Props) {
         <button
           onClick={handleConfirm}
           disabled={!propertyId || (buyer ? buyer.cash < (selectedDef?.basePrice ?? 0) : false)}
-          className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 disabled:opacity-40 text-gray-950 font-black rounded-xl transition-colors"
+          className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 disabled:opacity-40 text-gray-950 font-black rounded-xl"
         >
           Beli
         </button>

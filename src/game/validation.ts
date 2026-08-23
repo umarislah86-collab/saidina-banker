@@ -101,14 +101,6 @@ export function validateBuildHouse(
   const def = getProperty(propertyId);
   if (def.propertyType !== 'standard') return { valid: false, error: 'Jenis hartanah ini tak boleh bina rumah' };
 
-  // Check all properties in group are owned and not mortgaged
-  const groupProps = state.properties.filter(p => {
-    const d = getProperty(p.propertyId);
-    return d.colorGroup === def.colorGroup;
-  });
-  const allOwned = groupProps.every(p => p.ownerId === playerId && !p.mortgaged);
-  if (!allOwned) return { valid: false, error: 'Kena ada semua hartanah dalam kumpulan yang sama (tak gadai) untuk bina rumah' };
-
   if (player.cash < def.houseBuildCost) {
     return { valid: false, error: `Tak cukup wang (kos RM${def.houseBuildCost.toLocaleString()})` };
   }

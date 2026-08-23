@@ -7,6 +7,7 @@ import { getProperty } from '../../data/properties';
 import { calculateNetWorth } from '../../game/netWorth';
 import RM from '../../components/RM';
 import ConfirmModal from '../../components/ConfirmModal';
+import AvatarCaptureModal from '../../components/AvatarCaptureModal';
 import TransferModal from './modals/TransferModal';
 import RentModal from './modals/RentModal';
 import PropertyModal from './modals/PropertyModal';
@@ -25,6 +26,7 @@ export default function BankerPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showGameId, setShowGameId] = useState(false);
   const [collectTarget, setCollectTarget] = useState(false);
+  const [avatarTarget, setAvatarTarget] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!state) navigate('/');
@@ -210,7 +212,6 @@ export default function BankerPage() {
           <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Pemain</p>
           <div className="space-y-2">
             {state.players.map(player => {
-              const pColor = PLAYER_COLOR_MAP[player.color];
               const ownedProps = state.properties.filter(p => p.ownerId === player.id);
               const netWorth = calculateNetWorth(player.id, state);
               const isCurrent = player.id === currentPlayer?.id;
@@ -224,7 +225,22 @@ export default function BankerPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pColor.hex }} />
+                      {player.avatar ? (
+                        <img
+                          src={player.avatar}
+                          alt={player.name}
+                          onClick={() => !player.isBankrupt && setAvatarTarget({ id: player.id, name: player.name })}
+                          className="w-8 h-8 rounded-full object-cover cursor-pointer ring-1 ring-gray-700"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => !player.isBankrupt && setAvatarTarget({ id: player.id, name: player.name })}
+                          className="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 text-xs hover:bg-gray-700"
+                          title="Tambah avatar"
+                        >
+                          📷
+                        </button>
+                      )}
                       <span className={`font-bold text-sm ${isCurrent ? 'text-white' : 'text-gray-300'}`}>
                         {player.name}
                         {player.isBankrupt && <span className="ml-1 text-red-400 text-xs">[MUFLIS]</span>}
@@ -305,6 +321,7 @@ export default function BankerPage() {
           state={state}
           onPayRent={(tenantId, propertyId, amount) => dispatch({ type: 'PAY_RENT', tenantId, propertyId, amount })}
           onClose={() => setModal(null)}
+          defaultTenantId={currentPlayer?.id}
         />
       )}
       {modal === 'property' && (
@@ -326,6 +343,7 @@ export default function BankerPage() {
         <BuildModal
           state={state}
           onBuildHouse={(playerId, propertyId) => dispatch({ type: 'BUILD_HOUSE', playerId, propertyId })}
+          onBuildHousesMulti={(playerId, propertyId, count) => dispatch({ type: 'BUILD_HOUSES_MULTI', playerId, propertyId, count })}
           onSellHouse={(playerId, propertyId) => dispatch({ type: 'SELL_HOUSE', playerId, propertyId })}
           onBuildHotel={(playerId, propertyId) => dispatch({ type: 'BUILD_HOTEL', playerId, propertyId })}
           onSellHotel={(playerId, propertyId) => dispatch({ type: 'SELL_HOTEL', playerId, propertyId })}
@@ -348,6 +366,14 @@ export default function BankerPage() {
           danger
           onConfirm={() => { resetGame(); navigate('/'); }}
           onCancel={() => setModal(null)}
+        />
+      )}
+      {avatarTarget && (
+        <AvatarCaptureModal
+          playerId={avatarTarget.id}
+          playerName={avatarTarget.name}
+          onCapture={dataUrl => dispatch({ type: 'SET_AVATAR', playerId: avatarTarget.id, avatar: dataUrl })}
+          onClose={() => setAvatarTarget(null)}
         />
       )}
     </div>

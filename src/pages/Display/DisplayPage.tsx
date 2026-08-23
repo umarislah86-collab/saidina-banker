@@ -126,7 +126,13 @@ export default function DisplayPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-gray-600 text-2xl font-black">#{rank + 1}</span>
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: pColor.hex }} />
+                  {player.avatar ? (
+                    <img src={player.avatar} alt={player.name} className="w-12 h-12 rounded-full object-cover" style={{ outline: `2px solid ${pColor.hex}` }} />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg" style={{ backgroundColor: pColor.hex + '44', border: `2px solid ${pColor.hex}` }}>
+                      {player.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div>
                     <p className="text-white font-black text-xl">{player.name}</p>
                     {isCurrent && <p className="text-amber-400 text-xs font-bold">GILIRAN SEKARANG</p>}
@@ -146,27 +152,32 @@ export default function DisplayPage() {
               </div>
 
               {Object.entries(byGroup).length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {Object.entries(byGroup).map(([group, props]) => {
                     const gc = GROUP_COLOR_MAP[group as keyof typeof GROUP_COLOR_MAP];
                     return (
-                      <div key={group} className="flex items-center gap-2 flex-wrap">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: gc.hex }} />
-                        {props.map(ps => {
-                          const def = getProperty(ps.propertyId);
-                          return (
-                            <span
-                              key={ps.propertyId}
-                              className="text-xs px-2 py-0.5 rounded font-medium"
-                              style={{ backgroundColor: gc.hex + '25', color: gc.hex }}
-                            >
-                              {def.name}
-                              {ps.mortgaged && ' [M]'}
-                              {ps.hotel && ' 🏨'}
-                              {!ps.hotel && ps.houses > 0 && ` 🏠×${ps.houses}`}
-                            </span>
-                          );
-                        })}
+                      <div key={group} className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: gc.hex }} />
+                          <span className="text-xs text-gray-500 uppercase tracking-wider">{group}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pl-4">
+                          {props.map(ps => {
+                            const def = getProperty(ps.propertyId);
+                            return (
+                              <span
+                                key={ps.propertyId}
+                                className="px-2.5 py-1 rounded-lg text-sm font-bold tracking-wide"
+                                style={{ backgroundColor: gc.hex + '30', color: gc.hex, border: `1px solid ${gc.hex}55` }}
+                              >
+                                {def.name}
+                                {ps.mortgaged && <span className="opacity-60 text-xs"> [M]</span>}
+                                {ps.hotel && ' 🏨'}
+                                {!ps.hotel && ps.houses > 0 && ` 🏠×${ps.houses}`}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
