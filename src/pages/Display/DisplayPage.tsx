@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { subscribeToGame, subscribeToResults } from '../../services/sync';
+import { subscribeToGame, subscribeToResults, deleteGameResult } from '../../services/sync';
 import { PLAYER_COLOR_MAP, GROUP_COLOR_MAP } from '../../types';
 import type { CoreGameState, GameResult } from '../../types';
 import { getProperty } from '../../data/properties';
@@ -185,15 +185,18 @@ export default function DisplayPage() {
 
   const activePlayers = gameState.players.filter(p => !p.isBankrupt);
   const currentPlayer = gameState.players[gameState.currentTurnIndex];
-  const rankedPlayers = [...activePlayers].sort(
+  const sortedActive = [...activePlayers].sort(
     (a, b) =>
       calculateNetWorth(b.id, gameState as Parameters<typeof calculateNetWorth>[1]) -
       calculateNetWorth(a.id, gameState as Parameters<typeof calculateNetWorth>[1])
   );
-  const bankruptPlayers = gameState.players.filter(p => p.isBankrupt);
+  const sortedBankrupt = gameState.players
+    .filter(p => p.isBankrupt)
+    .sort((a, b) => ((b as any).bankruptAt ?? 0) - ((a as any).bankruptAt ?? 0));
+  const allPlayers = [...sortedActive, ...sortedBankrupt];
   const elapsed = gameState.createdAt ? now - gameState.createdAt : 0;
-  const avPx = avatarPx(rankedPlayers.length);
-  const cols = GRID_COLS[Math.min(rankedPlayers.length, 6)] ?? 'grid-cols-6';
+  const avPx = avatarPx(allPlayers.length);
+  const cols = GRID_COLS[Math.min(allPlayers.length, 6)] ?? 'grid-cols-6';
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 p-4 gap-3 overflow-hidden">
@@ -223,11 +226,12 @@ export default function DisplayPage() {
 
       {/* Player cards grid */}
       <div className={`flex-[3] min-h-0 grid ${cols} gap-3`}>
-        {rankedPlayers.map((player, rank) => {
+        {allPlayers.map((player, rank) => {
           const pColor = PLAYER_COLOR_MAP[player.color];
           const ownedProps = gameState.properties.filter(p => p.ownerId === player.id);
           const netWorth = calculateNetWorth(player.id, gameState as Parameters<typeof calculateNetWorth>[1]);
           const isCurrent = player.id === currentPlayer?.id;
+          const isBankrupt = player.isBankrupt;
           const playerAnims = animations.filter(a => a.playerId === player.id);
 
           const byGroup: Record<string, typeof ownedProps> = {};
@@ -240,18 +244,18 @@ export default function DisplayPage() {
           return (
             <div
               key={player.id}
-              className={`relative bg-gray-900 rounded-2xl flex flex-col border-2 overflow-hidden ${isCurrent ? 'card-glow' : ''}`}
+              className={`relative bg-gray-900 rounded-2xl flex flex-col border-2 overflow-hidden ${isCurrent && !isBankrupt ? 'card-glow' : ''}`}
               style={{
-                borderColor: isCurrent ? pColor.hex : '#1f2937',
+                borderColor: isBankrupt ? '#7f1d1d' : isCurrent ? pColor.hex : '#1f2937',
                 ['--gc' as string]: pColor.hex + 'aa',
               }}
             >
               {/* Rank + Networth badge */}
               <div
                 className="shrink-0 flex items-center justify-between px-3 py-2"
-                style={{ backgroundColor: pColor.hex + '28' }}
+                style={{ backgroundColor: isBankrupt ? '#7f1d1d55' : pColor.hex + '28' }}
               >
-                <span className="font-black text-lg" style={{ color: pColor.hex }}>#{rank + 1}</span>
+                <span className="font-black text-lg" style={{ color: isBankrupt ? '#ef4444' : pColor.hex }}>#{rank + 1}</span>
                 <span className="font-black text-base text-white">RM{netWorth.toLocaleString()}</span>
               </div>
 
@@ -321,6 +325,24 @@ export default function DisplayPage() {
               {playerAnims.map(anim => (
                 <FloatLabel key={anim.id} amount={anim.amount} sign={anim.sign} />
               ))}
+
+              {/* MUFLIS overlay */}
+              {isBankrupt && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg, #7f1d1d44 0%, #dc262644 100%)' }}>
+                  <span
+                    className="font-black tracking-widest rotate-[-20deg] select-none"
+                    style={{
+                      fontSize: 'clamp(1.4rem, 3.5vw, 2.2rem)',
+                      color: '#ef4444',
+                      textShadow: '0 0 20px #ef4444, 0 0 40px #7f1d1d',
+                      opacity: 0.9,
+                    }}
+                  >
+                    MUFLIS
+                  </span>
+                </div>
+              )}
             </div>
           );
         })}
@@ -346,7 +368,12 @@ export default function DisplayPage() {
                 return h > 0 ? `${h}j ${m}m` : `${m}m`;
               })();
               return (
-                <div key={r.gameId} className="flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-col items-center gap-1.5 min-w-[110px]">
+                <div key={r.gameId} className="relative flex-shrink-0 bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-col items-center gap-1.5 min-w-[110px]">
+                  <button
+                    onClick={() => deleteGameResult(r.gameId)}
+                    className="absolute top-1.5 right-1.5 text-gray-700 hover:text-red-500 text-xs w-5 h-5 flex items-center justify-center rounded"
+                    title="Padam"
+                  >✕</button>
                   <span className="text-gray-600 text-xs">#{i + 1}</span>
                   {winner?.avatar ? (
                     <img src={winner.avatar} className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-500" alt="" />
@@ -370,13 +397,7 @@ export default function DisplayPage() {
       </div>
 
       {/* Footer */}
-      <div className="shrink-0 flex items-center justify-between">
-        {bankruptPlayers.length > 0 ? (
-          <div className="flex gap-2 text-gray-600 text-xs">
-            <span>Muflis:</span>
-            {bankruptPlayers.map(p => <span key={p.id}>{p.name}</span>)}
-          </div>
-        ) : <div />}
+      <div className="shrink-0 flex items-center justify-end">
         <p className="text-gray-800 text-xs font-mono">{gameState.gameId}</p>
       </div>
     </div>

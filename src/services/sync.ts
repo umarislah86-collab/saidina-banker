@@ -41,6 +41,10 @@ export function subscribeToGame(
   );
 }
 
+export function deleteGameResult(gameId: string): Promise<void> {
+  return deleteDoc(doc(db, RESULTS_COLLECTION, gameId));
+}
+
 export function subscribeToResults(
   onUpdate: (results: GameResult[]) => void,
   onError?: (err: Error) => void
