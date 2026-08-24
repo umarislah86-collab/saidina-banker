@@ -15,8 +15,9 @@ import MortgageModal from './modals/MortgageModal';
 import BuildModal from './modals/BuildModal';
 import BankruptcyModal from './modals/BankruptcyModal';
 import FinishModal from './modals/FinishModal';
+import TradeModal from './modals/TradeModal';
 
-type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | 'finish' | null;
+type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | 'finish' | 'trade' | null;
 
 const PASS_GO = 1400;
 
@@ -44,6 +45,7 @@ export default function BankerPage() {
     { id: 'property', label: 'Beli Tanah', icon: '📋', color: 'bg-purple-600 hover:bg-purple-500' },
     { id: 'mortgage', label: 'Gadai / Tebus', icon: '🏦', color: 'bg-orange-600 hover:bg-orange-500' },
     { id: 'build', label: 'Bangunan', icon: '🏗', color: 'bg-cyan-600 hover:bg-cyan-500' },
+    { id: 'trade', label: 'Pindah Harta', icon: '🔄', color: 'bg-teal-600 hover:bg-teal-500' },
     { id: 'bankruptcy', label: 'Muflis', icon: '⚠', color: 'bg-red-600 hover:bg-red-500' },
   ] as const;
 
@@ -352,8 +354,16 @@ export default function BankerPage() {
           onBuildHouse={(playerId, propertyId) => dispatch({ type: 'BUILD_HOUSE', playerId, propertyId })}
           onBuildHousesMulti={(playerId, propertyId, count) => dispatch({ type: 'BUILD_HOUSES_MULTI', playerId, propertyId, count })}
           onSellHouse={(playerId, propertyId) => dispatch({ type: 'SELL_HOUSE', playerId, propertyId })}
+          onSellHousesMulti={(playerId, propertyId, count) => dispatch({ type: 'SELL_HOUSES_MULTI', playerId, propertyId, count })}
           onBuildHotel={(playerId, propertyId) => dispatch({ type: 'BUILD_HOTEL', playerId, propertyId })}
           onSellHotel={(playerId, propertyId) => dispatch({ type: 'SELL_HOTEL', playerId, propertyId })}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'trade' && (
+        <TradeModal
+          state={state}
+          onTransfer={(fromId, toId, propertyId) => dispatch({ type: 'TRANSFER_PROPERTY', fromId, toId, propertyId })}
           onClose={() => setModal(null)}
         />
       )}

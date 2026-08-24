@@ -10,6 +10,7 @@ interface Props {
   onBuildHouse: (playerId: string, propertyId: string) => void;
   onBuildHousesMulti: (playerId: string, propertyId: string, count: number) => void;
   onSellHouse: (playerId: string, propertyId: string) => void;
+  onSellHousesMulti: (playerId: string, propertyId: string, count: number) => void;
   onBuildHotel: (playerId: string, propertyId: string) => void;
   onSellHotel: (playerId: string, propertyId: string) => void;
   onClose: () => void;
@@ -17,7 +18,7 @@ interface Props {
 
 type BuildAction = 'build_house' | 'sell_house' | 'build_hotel' | 'sell_hotel';
 
-export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, onSellHouse, onBuildHotel, onSellHotel, onClose }: Props) {
+export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, onSellHouse, onSellHousesMulti, onBuildHotel, onSellHotel, onClose }: Props) {
   const active = state.players.filter(p => !p.isBankrupt);
   const [playerId, setPlayerId] = useState(state.players[state.currentTurnIndex]?.id ?? active[0]?.id ?? '');
   const [propertyId, setPropertyId] = useState('');
@@ -36,6 +37,7 @@ export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, on
   const maxHousesCanBuild = selectedPropState && !selectedPropState.hotel
     ? Math.min(4 - selectedPropState.houses, player ? Math.floor(player.cash / (selectedDef?.houseBuildCost ?? 1)) : 0)
     : 0;
+  const maxHousesCanSell = selectedPropState?.houses ?? 0;
 
   function handleConfirm() {
     if (!propertyId) { setError('Pilih hartanah'); return; }
@@ -50,7 +52,11 @@ export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, on
       }
     } else if (action === 'sell_house') {
       if (!selectedPropState || selectedPropState.houses === 0) { setError('Tiada rumah untuk dijual'); return; }
-      onSellHouse(playerId, propertyId);
+      if (quantity > 1) {
+        onSellHousesMulti(playerId, propertyId, quantity);
+      } else {
+        onSellHouse(playerId, propertyId);
+      }
     } else if (action === 'build_hotel') {
       const v = validateBuildHotel(playerId, propertyId, state);
       if (!v.valid) { setError(v.error!); return; }
@@ -65,7 +71,7 @@ export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, on
   function getCost() {
     if (!selectedDef) return 0;
     if (action === 'build_house') return selectedDef.houseBuildCost * quantity;
-    if (action === 'sell_house') return Math.floor(selectedDef.houseBuildCost / 2);
+    if (action === 'sell_house') return Math.floor(selectedDef.houseBuildCost / 2) * quantity;
     if (action === 'build_hotel') return selectedDef.hotelBuildCost;
     return Math.floor(selectedDef.hotelBuildCost / 2);
   }
@@ -133,19 +139,27 @@ export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, on
           </select>
         </div>
 
-        {/* Quantity selector — only for build_house */}
+        {/* Quantity selector — build or sell house */}
         {action === 'build_house' && propertyId && maxHousesCanBuild > 0 && (
           <div className="space-y-1">
-            <label className="text-gray-400 text-xs uppercase tracking-wider">Bilangan Rumah</label>
+            <label className="text-gray-400 text-xs uppercase tracking-wider">Bilangan Rumah (Bina)</label>
             <div className="flex gap-2">
               {Array.from({ length: maxHousesCanBuild }, (_, i) => i + 1).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setQuantity(n)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
-                    quantity === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
+                <button key={n} onClick={() => setQuantity(n)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${quantity === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {action === 'sell_house' && propertyId && maxHousesCanSell > 0 && (
+          <div className="space-y-1">
+            <label className="text-gray-400 text-xs uppercase tracking-wider">Bilangan Rumah (Jual)</label>
+            <div className="flex gap-2">
+              {Array.from({ length: maxHousesCanSell }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => setQuantity(n)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${quantity === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                   {n}
                 </button>
               ))}
@@ -163,7 +177,7 @@ export default function BuildModal({ state, onBuildHouse, onBuildHousesMulti, on
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">{isSellingAction ? 'Terima' : `Kos${action === 'build_house' && quantity > 1 ? ` ×${quantity}` : ''}`}</span>
+              <span className="text-gray-400">{isSellingAction ? `Terima${quantity > 1 ? ` ×${quantity}` : ''}` : `Kos${action === 'build_house' && quantity > 1 ? ` ×${quantity}` : ''}`}</span>
               <RM amount={cost} size="sm" />
             </div>
             <div className="flex justify-between border-t border-gray-700 pt-2">

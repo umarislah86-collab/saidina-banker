@@ -16,6 +16,7 @@ type Action =
   | { type: 'UNMORTGAGE'; playerId: string; propertyId: string }
   | { type: 'BUILD_HOUSE'; playerId: string; propertyId: string }
   | { type: 'BUILD_HOUSES_MULTI'; playerId: string; propertyId: string; count: number }
+  | { type: 'SELL_HOUSES_MULTI'; playerId: string; propertyId: string; count: number }
   | { type: 'SELL_HOUSE'; playerId: string; propertyId: string }
   | { type: 'BUILD_HOTEL'; playerId: string; propertyId: string }
   | { type: 'SELL_HOTEL'; playerId: string; propertyId: string }
@@ -52,6 +53,11 @@ function reducer(state: GameState | null, action: Action): GameState | null {
     case 'BUILD_HOUSES_MULTI': {
       let s = state;
       for (let i = 0; i < action.count; i++) s = TX.buildHouse(s, action.playerId, action.propertyId);
+      return s;
+    }
+    case 'SELL_HOUSES_MULTI': {
+      let s = state;
+      for (let i = 0; i < action.count; i++) s = TX.sellHouse(s, action.playerId, action.propertyId);
       return s;
     }
     case 'SELL_HOUSE':
