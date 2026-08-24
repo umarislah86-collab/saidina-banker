@@ -4,6 +4,7 @@ import type { SetupPlayerDraft, PlayerColor, GameConfig } from '../../types';
 import { PLAYER_COLOR_MAP } from '../../types';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../../data/gameConfig';
 import { useGameState } from '../../hooks/useGameState';
+import { loadGame } from '../../game/persistence';
 import AvatarCaptureModal from '../../components/AvatarCaptureModal';
 
 const COLORS: PlayerColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];
@@ -28,6 +29,8 @@ export default function SetupPage() {
   const [players, setPlayers] = useState<SetupPlayerDraft[]>(defaultPlayers(2));
   const [errors, setErrors] = useState<string[]>([]);
   const [avatarTarget, setAvatarTarget] = useState<{ idx: number; name: string } | null>(null);
+
+  const savedGame = loadGame();
 
   function handleCountChange(count: number) {
     setPlayerCount(count);
@@ -71,6 +74,24 @@ export default function SetupPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-lg space-y-6">
+
+        {/* Resume active game banner */}
+        {savedGame && (
+          <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-amber-400 font-bold text-sm">Ada permainan aktif!</p>
+              <p className="text-gray-400 text-xs">
+                {savedGame.players.filter(p => !p.isBankrupt).map(p => p.name).join(', ')} · Giliran ke-{savedGame.turnNumber}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/banker')}
+              className="flex-shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl text-sm"
+            >
+              Sambung ▶
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="text-center space-y-1">
