@@ -13,7 +13,7 @@ interface Props {
 
 function propertyFullValue(propState: { houses: number; hotel: boolean; mortgaged: boolean }, def: ReturnType<typeof getProperty>): number {
   if (propState.mortgaged) return def.mortgageValue;
-  return def.basePrice + propState.houses * def.houseBuildCost + (propState.hotel ? def.hotelBuildCost : 0);
+  return def.basePrice + propState.houses * def.houseBuildCost + (propState.hotel ? 4 * def.houseBuildCost + def.hotelBuildCost : 0);
 }
 
 export default function TradeModal({ state, onTransfer, onClose }: Props) {
@@ -116,10 +116,16 @@ export default function TradeModal({ state, onTransfer, onClose }: Props) {
               </div>
             )}
             {selectedPropState.hotel && (
-              <div className="flex justify-between">
-                <span className="text-gray-400">Hotel</span>
-                <RM amount={selectedDef.hotelBuildCost} size="sm" />
-              </div>
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">4 rumah × RM{selectedDef.houseBuildCost.toLocaleString()}</span>
+                  <RM amount={4 * selectedDef.houseBuildCost} size="sm" />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Hotel</span>
+                  <RM amount={selectedDef.hotelBuildCost} size="sm" />
+                </div>
+              </>
             )}
             <div className="flex justify-between pt-1 border-t border-gray-700">
               <span className="text-white font-semibold">Nilai penuh</span>

@@ -14,10 +14,10 @@ export function calculateNetWorth(playerId: string, state: GameState): number {
     // Property value
     worth += propState.mortgaged ? def.mortgageValue : def.basePrice;
 
-    // Development value (at full build cost)
+    // Development value (at full build cost — hotel requires 4 prior houses)
     if (def.propertyType === 'standard') {
       worth += propState.houses * def.houseBuildCost;
-      if (propState.hotel) worth += def.hotelBuildCost;
+      if (propState.hotel) worth += 4 * def.houseBuildCost + def.hotelBuildCost;
     }
   }
 
