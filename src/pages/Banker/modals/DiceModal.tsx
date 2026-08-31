@@ -4,6 +4,7 @@ import { GROUP_COLOR_MAP } from '../../../types';
 import { getSquare } from '../../../data/board';
 import { getProperty } from '../../../data/properties';
 import { calculateRent } from '../../../game/rent';
+import { validateBuildHouse, validateBuildHotel } from '../../../game/validation';
 import RM from '../../../components/RM';
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   onCollectStart: (playerId: string) => void;
   onBuyProperty: (playerId: string, propertyId: string) => void;
   onPayRent: (tenantId: string, propertyId: string, amount: number) => void;
+  onBuildHouse: (playerId: string, propertyId: string) => void;
+  onBuildHotel: (playerId: string, propertyId: string) => void;
   onClose: () => void;
 }
 
@@ -35,7 +38,7 @@ function squareEmoji(type: string): string {
 }
 
 export default function DiceModal({
-  state, onMovePlayer, onSetJailTurns, onTransfer, onCollectStart, onBuyProperty, onPayRent, onClose,
+  state, onMovePlayer, onSetJailTurns, onTransfer, onCollectStart, onBuyProperty, onPayRent, onBuildHouse, onBuildHotel, onClose,
 }: Props) {
   const active = state.players.filter(p => !p.isBankrupt);
   const currentPlayer = state.players[state.currentTurnIndex];
@@ -332,7 +335,31 @@ export default function DiceModal({
                     Beli {sq.name} — RM{propDef.basePrice.toLocaleString()}
                   </button>
                 )}
-                {isOwnProp && <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm">Tanah Sendiri ✓</div>}
+                {isOwnProp && (() => {
+                  const canBuildHouse = propDef.propertyType === 'standard' && !propState.hotel && propState.houses < 4 && validateBuildHouse(playerId, sq.propertyId!, state).valid;
+                  const canBuildHotel = propDef.propertyType === 'standard' && propState.houses === 4 && !propState.hotel && validateBuildHotel(playerId, sq.propertyId!, state).valid;
+                  return (
+                    <div className="space-y-2">
+                      <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm">Tanah Sendiri ✓</div>
+                      {canBuildHouse && (
+                        <button
+                          onClick={() => { onBuildHouse(playerId, sq.propertyId!); onClose(); }}
+                          className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl"
+                        >
+                          🏠 Bina Rumah — RM{propDef.houseBuildCost.toLocaleString()}
+                        </button>
+                      )}
+                      {canBuildHotel && (
+                        <button
+                          onClick={() => { onBuildHotel(playerId, sq.propertyId!); onClose(); }}
+                          className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-xl"
+                        >
+                          🏨 Bina Hotel — RM{propDef.hotelBuildCost.toLocaleString()}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
                 {isOthersProp && !propState.mortgaged && (
                   <div className="space-y-2">
                     <div className="bg-gray-800 rounded-xl p-3 flex justify-between text-sm">

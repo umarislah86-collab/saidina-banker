@@ -369,6 +369,8 @@ export default function BankerPage() {
           onCollectStart={(playerId) => dispatch({ type: 'COLLECT_START', playerId, amount: PASS_GO })}
           onBuyProperty={(playerId, propertyId) => dispatch({ type: 'BUY_PROPERTY', playerId, propertyId })}
           onPayRent={(tenantId, propertyId, amount) => dispatch({ type: 'PAY_RENT', tenantId, propertyId, amount })}
+          onBuildHouse={(playerId, propertyId) => dispatch({ type: 'BUILD_HOUSE', playerId, propertyId })}
+          onBuildHotel={(playerId, propertyId) => dispatch({ type: 'BUILD_HOTEL', playerId, propertyId })}
           onClose={() => setModal(null)}
         />
       )}
