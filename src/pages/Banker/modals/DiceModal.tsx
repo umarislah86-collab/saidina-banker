@@ -16,6 +16,7 @@ interface Props {
   onBuyProperty: (playerId: string, propertyId: string) => void;
   onPayRent: (tenantId: string, propertyId: string, amount: number) => void;
   onBuildHouse: (playerId: string, propertyId: string) => void;
+  onBuildHousesMulti: (playerId: string, propertyId: string, count: number) => void;
   onBuildHotel: (playerId: string, propertyId: string) => void;
   onClose: () => void;
 }
@@ -38,7 +39,7 @@ function squareEmoji(type: string): string {
 }
 
 export default function DiceModal({
-  state, onMovePlayer, onSetJailTurns, onTransfer, onCollectStart, onBuyProperty, onPayRent, onBuildHouse, onBuildHotel, onClose,
+  state, onMovePlayer, onSetJailTurns, onTransfer, onCollectStart, onBuyProperty, onPayRent, onBuildHouse, onBuildHousesMulti, onBuildHotel, onClose,
 }: Props) {
   const active = state.players.filter(p => !p.isBankrupt);
   const currentPlayer = state.players[state.currentTurnIndex];
@@ -57,6 +58,7 @@ export default function DiceModal({
   const [bailed, setBailed] = useState(false);
   const [forcedBail, setForcedBail] = useState(false);
   const [chanceInput, setChanceInput] = useState<number | null>(null);
+  const [buildQty, setBuildQty] = useState(1);
 
   function resetForPlayer(id: string) {
     setPlayerId(id);
@@ -338,16 +340,29 @@ export default function DiceModal({
                 {isOwnProp && (() => {
                   const canBuildHouse = propDef.propertyType === 'standard' && !propState.hotel && propState.houses < 4 && validateBuildHouse(playerId, sq.propertyId!, state).valid;
                   const canBuildHotel = propDef.propertyType === 'standard' && propState.houses === 4 && !propState.hotel && validateBuildHotel(playerId, sq.propertyId!, state).valid;
+                  const player = state.players.find(p => p.id === playerId);
+                  const maxAffordable = player ? Math.floor(player.cash / propDef.houseBuildCost) : 0;
+                  const maxBuild = Math.min(4 - propState.houses, maxAffordable);
                   return (
                     <div className="space-y-2">
                       <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm">Tanah Sendiri ✓</div>
                       {canBuildHouse && (
-                        <button
-                          onClick={() => { onBuildHouse(playerId, sq.propertyId!); onClose(); }}
-                          className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl"
-                        >
-                          🏠 Bina Rumah — RM{propDef.houseBuildCost.toLocaleString()}
-                        </button>
+                        <>
+                          <div className="flex gap-2">
+                            {Array.from({ length: maxBuild }, (_, i) => i + 1).map(n => (
+                              <button key={n} onClick={() => setBuildQty(n)}
+                                className={`flex-1 py-2 rounded-xl text-sm font-black transition-colors ${buildQty === n ? 'bg-cyan-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => { buildQty > 1 ? onBuildHousesMulti(playerId, sq.propertyId!, buildQty) : onBuildHouse(playerId, sq.propertyId!); onClose(); }}
+                            className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl"
+                          >
+                            🏠 Bina {buildQty} Rumah — RM{(propDef.houseBuildCost * buildQty).toLocaleString()}
+                          </button>
+                        </>
                       )}
                       {canBuildHotel && (
                         <button
