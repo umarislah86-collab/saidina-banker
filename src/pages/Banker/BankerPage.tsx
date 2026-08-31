@@ -74,9 +74,16 @@ export default function BankerPage() {
     }
   }
 
-  function txParties(tx: Transaction): { from: string; to: string } {
-    const name = (id?: string) => id ? (state!.players.find(p => p.id === id)?.name ?? '?') : 'Bank';
-    return { from: name(tx.fromPlayerId), to: name(tx.toPlayerId) };
+  function txParties(tx: Transaction): { from: string; to: string; fromColor?: string; toColor?: string } {
+    const lookup = (id?: string) => id ? state!.players.find(p => p.id === id) : null;
+    const fromP = lookup(tx.fromPlayerId);
+    const toP = lookup(tx.toPlayerId);
+    return {
+      from: fromP?.name ?? 'Bank',
+      to: toP?.name ?? 'Bank',
+      fromColor: fromP ? PLAYER_COLOR_MAP[fromP.color].hex : undefined,
+      toColor: toP ? PLAYER_COLOR_MAP[toP.color].hex : undefined,
+    };
   }
 
   function txIcon(tx: Transaction): string {
@@ -327,17 +334,17 @@ export default function BankerPage() {
             <div className="space-y-0">
               {recentTx.length === 0 && <p className="text-gray-600 text-sm text-center py-4">Tiada rekod</p>}
               {recentTx.map(tx => {
-                const { from, to } = txParties(tx);
+                const { from, to, fromColor, toColor } = txParties(tx);
                 return (
                   <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-800 gap-2">
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="text-base shrink-0 mt-0.5">{txIcon(tx)}</span>
                       <div className="min-w-0">
                         <p className="text-gray-300 text-xs font-semibold leading-tight truncate">{txLabel(tx)}</p>
-                        <p className="text-gray-600 text-xs mt-0.5">
-                          <span className="text-gray-400">{from}</span>
-                          {' → '}
-                          <span className="text-gray-400">{to}</span>
+                        <p className="text-xs mt-0.5">
+                          <span style={{ color: fromColor ?? '#6b7280' }}>{from}</span>
+                          <span className="text-gray-700"> → </span>
+                          <span style={{ color: toColor ?? '#6b7280' }}>{to}</span>
                         </p>
                       </div>
                     </div>
