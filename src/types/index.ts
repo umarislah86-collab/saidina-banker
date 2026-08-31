@@ -118,6 +118,8 @@ export interface GameState {
   snapshot: CoreGameState | null;
   createdAt: number;
   updatedAt: number;
+  positions?: Record<string, number>; // playerId → board position 0–39
+  inJail?: Record<string, boolean>;
 }
 
 export type CoreGameState = Omit<GameState, 'snapshot'>;

@@ -16,8 +16,9 @@ import BuildModal from './modals/BuildModal';
 import BankruptcyModal from './modals/BankruptcyModal';
 import FinishModal from './modals/FinishModal';
 import TradeModal from './modals/TradeModal';
+import DiceModal from './modals/DiceModal';
 
-type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | 'finish' | 'trade' | null;
+type Modal = 'transfer' | 'rent' | 'property' | 'mortgage' | 'build' | 'bankruptcy' | 'reset' | 'finish' | 'trade' | 'dice' | null;
 
 const PASS_GO = 1400;
 
@@ -40,13 +41,14 @@ export default function BankerPage() {
   const activePlayers = state.players.filter(p => !p.isBankrupt);
 
   const actionButtons = [
-    { id: 'transfer', label: 'Pindah Wang', icon: '💸', color: 'bg-blue-600 hover:bg-blue-500' },
-    { id: 'rent', label: 'Bayar Sewa', icon: '🏠', color: 'bg-green-600 hover:bg-green-500' },
-    { id: 'property', label: 'Beli Tanah', icon: '📋', color: 'bg-purple-600 hover:bg-purple-500' },
-    { id: 'mortgage', label: 'Gadai / Tebus', icon: '🏦', color: 'bg-orange-600 hover:bg-orange-500' },
-    { id: 'build', label: 'Bangunan', icon: '🏗', color: 'bg-cyan-600 hover:bg-cyan-500' },
-    { id: 'trade', label: 'Pindah Harta', icon: '🔄', color: 'bg-teal-600 hover:bg-teal-500' },
-    { id: 'bankruptcy', label: 'Muflis', icon: '⚠', color: 'bg-red-600 hover:bg-red-500' },
+    { id: 'dice',       label: 'Balingan Dadu', icon: '🎲', color: 'bg-amber-600 hover:bg-amber-500' },
+    { id: 'transfer',  label: 'Pindah Wang',   icon: '💸', color: 'bg-blue-600 hover:bg-blue-500' },
+    { id: 'rent',      label: 'Bayar Sewa',    icon: '🏠', color: 'bg-green-600 hover:bg-green-500' },
+    { id: 'property',  label: 'Beli Tanah',    icon: '📋', color: 'bg-purple-600 hover:bg-purple-500' },
+    { id: 'mortgage',  label: 'Gadai / Tebus', icon: '🏦', color: 'bg-orange-600 hover:bg-orange-500' },
+    { id: 'build',     label: 'Bangunan',      icon: '🏗', color: 'bg-cyan-600 hover:bg-cyan-500' },
+    { id: 'trade',     label: 'Pindah Harta',  icon: '🔄', color: 'bg-teal-600 hover:bg-teal-500' },
+    { id: 'bankruptcy',label: 'Muflis',        icon: '⚠',  color: 'bg-red-600 hover:bg-red-500' },
   ] as const;
 
   function txLabel(tx: Transaction): string {
@@ -258,7 +260,7 @@ export default function BankerPage() {
                     </div>
                     <div className="text-right">
                       <RM amount={player.cash} size="sm" />
-                      <p className="text-gray-500 text-xs">NW: RM{netWorth.toLocaleString()}</p>
+                      <p className="text-gray-500 text-xs">NW: RM{netWorth.toLocaleString()} · Petak {state.positions?.[player.id] ?? 0}</p>
                     </div>
                   </div>
 
@@ -318,6 +320,17 @@ export default function BankerPage() {
       </div>
 
       {/* Modals */}
+      {modal === 'dice' && (
+        <DiceModal
+          state={state}
+          onMovePlayer={(playerId, newPosition, wasJailed) => dispatch({ type: 'MOVE_PLAYER', playerId, newPosition, wasJailed })}
+          onTransfer={(fromId, toId, amount) => dispatch({ type: 'TRANSFER', fromId, toId, amount })}
+          onCollectStart={(playerId) => dispatch({ type: 'COLLECT_START', playerId, amount: PASS_GO })}
+          onBuyProperty={(playerId, propertyId) => dispatch({ type: 'BUY_PROPERTY', playerId, propertyId })}
+          onPayRent={(tenantId, propertyId, amount) => dispatch({ type: 'PAY_RENT', tenantId, propertyId, amount })}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === 'transfer' && (
         <TransferModal
           state={state}

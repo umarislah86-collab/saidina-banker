@@ -27,7 +27,8 @@ type Action =
   | { type: 'UNDO' }
   | { type: 'RESET' }
   | { type: 'COLLECT_START'; playerId: string; amount: number }
-  | { type: 'SET_AVATAR'; playerId: string; avatar: string };
+  | { type: 'SET_AVATAR'; playerId: string; avatar: string }
+  | { type: 'MOVE_PLAYER'; playerId: string; newPosition: number; wasJailed?: boolean };
 
 function reducer(state: GameState | null, action: Action): GameState | null {
   if (action.type === 'LOAD') return action.state;
@@ -90,6 +91,13 @@ function reducer(state: GameState | null, action: Action): GameState | null {
       return TX.collectStart(state, action.playerId, action.amount);
     case 'SET_AVATAR':
       return { ...state, players: state.players.map(p => p.id === action.playerId ? { ...p, avatar: action.avatar } : p) };
+    case 'MOVE_PLAYER': {
+      const positions = { ...(state.positions ?? {}), [action.playerId]: action.newPosition };
+      const inJail = { ...(state.inJail ?? {}) };
+      if (action.wasJailed) inJail[action.playerId] = true;
+      else delete inJail[action.playerId];
+      return { ...state, positions, inJail };
+    }
     default:
       return state;
   }
