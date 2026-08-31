@@ -53,8 +53,7 @@ export default function DiceModal({
   const [jailMsg, setJailMsg] = useState('');
   const [bailed, setBailed] = useState(false);
   const [forcedBail, setForcedBail] = useState(false);
-
-  const player = state.players.find(p => p.id === playerId);
+  const [chanceInput, setChanceInput] = useState<number | null>(null);
 
   function resetForPlayer(id: string) {
     setPlayerId(id);
@@ -101,11 +100,19 @@ export default function DiceModal({
     const rawPos = currentPos + total;
     const passedMula = rawPos >= 40;
     const newPos = rawPos % 40;
-    const sq = getSquare(newPos);
-    const wasJailed = sq.type === 'go_to_jail';
-    onMovePlayer(playerId, wasJailed ? 10 : newPos, wasJailed);
-    setResult({ newPos: wasJailed ? 10 : newPos, passedMula });
+    onMovePlayer(playerId, newPos, false); // never auto-jail — let result panel decide
+    setResult({ newPos, passedMula });
     setPhase('result');
+  }
+
+  function handleChanceMove() {
+    if (chanceInput === null) return;
+    const dest = Math.max(0, Math.min(39, chanceInput));
+    const chanceSq = result?.newPos ?? 0;
+    const passedMula = dest < chanceSq; // wrapped forward past GO
+    onMovePlayer(playerId, dest, false); // let result panel handle go_to_jail choice
+    setChanceInput(null);
+    setResult({ newPos: dest, passedMula });
   }
 
   const sq = result !== null ? getSquare(result.newPos) : null;
@@ -268,8 +275,22 @@ export default function DiceModal({
               </button>
             )}
             {sq.type === 'go_to_jail' && (
-              <div className="bg-red-900/30 border border-red-800 rounded-xl p-3 text-center text-red-400 text-sm font-semibold">
-                🚔 {player?.name} dihantar ke penjara (Petak 10)
+              <div className="space-y-2">
+                <div className="bg-red-900/30 border border-red-800 rounded-xl p-3 text-center text-red-400 text-sm font-semibold">
+                  🚔 Petak Masuk Penjara
+                </div>
+                <button
+                  onClick={() => { onMovePlayer(playerId, 10, true); onClose(); }}
+                  className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl"
+                >
+                  Masuk Penjara → Petak 10
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl"
+                >
+                  Cuma Melawat (Kekal Petak 30)
+                </button>
               </div>
             )}
             {sq.type === 'jail' && (
@@ -279,9 +300,28 @@ export default function DiceModal({
               <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm">Tepat di Mula ✓</div>
             )}
             {sq.type === 'chance' && (
-              <div className="bg-gray-800 rounded-xl p-3 text-center space-y-1">
-                <p className="text-amber-400 font-bold text-sm">❓ Kad Keputusan</p>
-                <p className="text-gray-500 text-xs">Ambil kad dan buat tindakan secara manual</p>
+              <div className="space-y-3">
+                <div className="bg-gray-800 rounded-xl p-3 text-center space-y-1">
+                  <p className="text-amber-400 font-bold text-sm">❓ Kad Keputusan</p>
+                  <p className="text-gray-500 text-xs">Ambil kad dan buat tindakan manual</p>
+                </div>
+                <div className="border-t border-gray-800 pt-3 space-y-2">
+                  <p className="text-gray-400 text-xs uppercase tracking-wider">Kad suruh gerak ke petak:</p>
+                  <input
+                    type="number"
+                    value={chanceInput ?? ''}
+                    onChange={e => setChanceInput(e.target.value ? Number(e.target.value) : null)}
+                    placeholder="No. petak (0–39)..."
+                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-xl font-black text-center focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    onClick={handleChanceMove}
+                    disabled={chanceInput === null}
+                    className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-gray-950 font-black rounded-xl"
+                  >
+                    Gerak ke Petak {chanceInput ?? '?'} →
+                  </button>
+                </div>
               </div>
             )}
             {sq.type === 'property' && propDef && propState && (
