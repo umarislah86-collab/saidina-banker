@@ -91,19 +91,14 @@ export default function DiceModal({
           <>
             <div className="space-y-1.5">
               <label className="text-gray-400 text-xs uppercase tracking-wider">Jumlah Dadu</label>
-              <div className="grid grid-cols-6 gap-2">
-                {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setTotal(n)}
-                    className={`py-2.5 rounded-xl font-black text-sm transition-colors ${
-                      total === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
+              <input
+                type="number"
+                value={total ?? ''}
+                onChange={e => setTotal(e.target.value ? Number(e.target.value) : null)}
+                placeholder="Masukkan jumlah..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-2xl font-black text-center focus:outline-none focus:border-amber-500"
+                autoFocus
+              />
             </div>
 
             <button
