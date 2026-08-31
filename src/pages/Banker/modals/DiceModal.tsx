@@ -16,8 +16,6 @@ interface Props {
   onClose: () => void;
 }
 
-const DIE_VALS = [1, 2, 3, 4, 5, 6];
-
 function squareEmoji(type: string): string {
   switch (type) {
     case 'mula': return '🏁';
@@ -37,13 +35,11 @@ export default function DiceModal({
   const active = state.players.filter(p => !p.isBankrupt);
   const currentPlayer = state.players[state.currentTurnIndex];
   const [playerId, setPlayerId] = useState(currentPlayer?.id ?? active[0]?.id ?? '');
-  const [d1, setD1] = useState<number | null>(null);
-  const [d2, setD2] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
   const [result, setResult] = useState<{ newPos: number; passedMula: boolean } | null>(null);
   const [done, setDone] = useState(false);
 
   const player = state.players.find(p => p.id === playerId);
-  const total = d1 !== null && d2 !== null ? d1 + d2 : null;
   const currentPos = state.positions?.[playerId] ?? 0;
 
   function handleMove() {
@@ -81,7 +77,7 @@ export default function DiceModal({
           <label className="text-gray-400 text-xs uppercase tracking-wider">Pemain</label>
           <select
             value={playerId}
-            onChange={e => { setPlayerId(e.target.value); setResult(null); setD1(null); setD2(null); }}
+            onChange={e => { setPlayerId(e.target.value); setResult(null); setTotal(null); }}
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
           >
             {active.map(p => (
@@ -90,36 +86,25 @@ export default function DiceModal({
           </select>
         </div>
 
-        {/* Dice input */}
+        {/* Dice total input */}
         {!result && (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              {[{ label: 'Dadu 1', val: d1, set: setD1 }, { label: 'Dadu 2', val: d2, set: setD2 }].map(({ label, val, set }) => (
-                <div key={label} className="space-y-1.5">
-                  <label className="text-gray-400 text-xs uppercase tracking-wider">{label}</label>
-                  <div className="flex gap-1 flex-wrap">
-                    {DIE_VALS.map(n => (
-                      <button
-                        key={n}
-                        onClick={() => set(n)}
-                        className={`w-9 h-9 rounded-lg font-black text-sm transition-colors ${
-                          val === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {total !== null && (
-              <div className="bg-gray-800 rounded-xl p-3 flex items-center justify-between">
-                <span className="text-gray-400 text-sm">Jumlah dadu</span>
-                <span className="text-white font-black text-xl">{total}</span>
+            <div className="space-y-1.5">
+              <label className="text-gray-400 text-xs uppercase tracking-wider">Jumlah Dadu</label>
+              <div className="grid grid-cols-6 gap-2">
+                {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setTotal(n)}
+                    className={`py-2.5 rounded-xl font-black text-sm transition-colors ${
+                      total === n ? 'bg-amber-500 text-gray-950' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             <button
               onClick={handleMove}
