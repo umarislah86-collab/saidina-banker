@@ -74,7 +74,31 @@ export default function BankerPage() {
     }
   }
 
-  const recentTx = [...state.transactions].reverse().slice(0, 15);
+  function txParties(tx: Transaction): { from: string; to: string } {
+    const name = (id?: string) => id ? (state!.players.find(p => p.id === id)?.name ?? '?') : 'Bank';
+    return { from: name(tx.fromPlayerId), to: name(tx.toPlayerId) };
+  }
+
+  function txIcon(tx: Transaction): string {
+    switch (tx.type) {
+      case 'pay_rent': return '🏠';
+      case 'buy_property': return '📋';
+      case 'transfer_property': return '🔄';
+      case 'mortgage': return '🏦';
+      case 'unmortgage': return '🏦';
+      case 'build_house': return '🏠';
+      case 'sell_house': return '🏚';
+      case 'build_hotel': return '🏨';
+      case 'sell_hotel': return '🏗';
+      case 'collect_start': return '🏁';
+      case 'pay_tax': return '💰';
+      case 'bankruptcy_to_player':
+      case 'bankruptcy_to_bank': return '⚠️';
+      default: return '💸';
+    }
+  }
+
+  const recentTx = [...state.transactions].reverse();
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col max-w-md mx-auto">
@@ -303,14 +327,23 @@ export default function BankerPage() {
             <div className="space-y-0">
               {recentTx.length === 0 && <p className="text-gray-600 text-sm text-center py-4">Tiada rekod</p>}
               {recentTx.map(tx => {
-                const fromPlayer = tx.fromPlayerId ? state.players.find(p => p.id === tx.fromPlayerId) : null;
+                const { from, to } = txParties(tx);
                 return (
-                  <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-800">
-                    <div>
-                      <p className="text-gray-300 text-sm">{txLabel(tx)}</p>
-                      {fromPlayer && <p className="text-gray-600 text-xs">{fromPlayer.name}</p>}
+                  <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-800 gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="text-base shrink-0 mt-0.5">{txIcon(tx)}</span>
+                      <div className="min-w-0">
+                        <p className="text-gray-300 text-xs font-semibold leading-tight truncate">{txLabel(tx)}</p>
+                        <p className="text-gray-600 text-xs mt-0.5">
+                          <span className="text-gray-400">{from}</span>
+                          {' → '}
+                          <span className="text-gray-400">{to}</span>
+                        </p>
+                      </div>
                     </div>
-                    {tx.amount !== undefined && tx.amount > 0 && <RM amount={tx.amount} size="sm" />}
+                    {tx.amount !== undefined && tx.amount > 0 && (
+                      <RM amount={tx.amount} size="sm" />
+                    )}
                   </div>
                 );
               })}
