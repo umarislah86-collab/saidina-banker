@@ -324,6 +324,7 @@ export default function BankerPage() {
         <DiceModal
           state={state}
           onMovePlayer={(playerId, newPosition, wasJailed) => dispatch({ type: 'MOVE_PLAYER', playerId, newPosition, wasJailed })}
+          onSetJailTurns={(playerId, turns) => dispatch({ type: 'SET_JAIL_TURNS', playerId, turns })}
           onTransfer={(fromId, toId, amount) => dispatch({ type: 'TRANSFER', fromId, toId, amount })}
           onCollectStart={(playerId) => dispatch({ type: 'COLLECT_START', playerId, amount: PASS_GO })}
           onBuyProperty={(playerId, propertyId) => dispatch({ type: 'BUY_PROPERTY', playerId, propertyId })}

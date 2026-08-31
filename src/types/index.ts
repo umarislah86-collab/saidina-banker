@@ -120,6 +120,7 @@ export interface GameState {
   updatedAt: number;
   positions?: Record<string, number>; // playerId → board position 0–39
   inJail?: Record<string, boolean>;
+  jailTurns?: Record<string, number>; // how many failed double attempts (0–2)
 }
 
 export type CoreGameState = Omit<GameState, 'snapshot'>;

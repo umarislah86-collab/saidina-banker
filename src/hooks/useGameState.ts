@@ -28,7 +28,8 @@ type Action =
   | { type: 'RESET' }
   | { type: 'COLLECT_START'; playerId: string; amount: number }
   | { type: 'SET_AVATAR'; playerId: string; avatar: string }
-  | { type: 'MOVE_PLAYER'; playerId: string; newPosition: number; wasJailed?: boolean };
+  | { type: 'MOVE_PLAYER'; playerId: string; newPosition: number; wasJailed?: boolean }
+  | { type: 'SET_JAIL_TURNS'; playerId: string; turns: number };
 
 function reducer(state: GameState | null, action: Action): GameState | null {
   if (action.type === 'LOAD') return action.state;
@@ -94,9 +95,19 @@ function reducer(state: GameState | null, action: Action): GameState | null {
     case 'MOVE_PLAYER': {
       const positions = { ...(state.positions ?? {}), [action.playerId]: action.newPosition };
       const inJail = { ...(state.inJail ?? {}) };
-      if (action.wasJailed) inJail[action.playerId] = true;
-      else delete inJail[action.playerId];
-      return { ...state, positions, inJail };
+      const jailTurns = { ...(state.jailTurns ?? {}) };
+      if (action.wasJailed) {
+        inJail[action.playerId] = true;
+        jailTurns[action.playerId] = 0;
+      } else {
+        delete inJail[action.playerId];
+        delete jailTurns[action.playerId];
+      }
+      return { ...state, positions, inJail, jailTurns };
+    }
+    case 'SET_JAIL_TURNS': {
+      const jailTurns = { ...(state.jailTurns ?? {}), [action.playerId]: action.turns };
+      return { ...state, jailTurns };
     }
     default:
       return state;
